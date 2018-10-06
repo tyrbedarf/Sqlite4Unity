@@ -1,16 +1,16 @@
 //
 // Copyright (c) 2009-2010 Krueger Systems, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if !UNITY_STANDALONE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace SQLite.MonoTouchAdmin
 			var c = new TablesViewController (Connection);
 			return c;
 		}
-		
+
 		public static RectangleF GetTableRect() {
 			return new RectangleF (0, 0, 320, 416);
 		}
@@ -59,7 +60,7 @@ namespace SQLite.MonoTouchAdmin
 
 		public TableMapping[] TableMappings { get; private set; }
 		public UITableView UITable { get; private set; }
-		
+
 		public Data DataSource { get; private set; }
 
 		public TablesViewController (SQLiteConnection connection)
@@ -67,9 +68,9 @@ namespace SQLite.MonoTouchAdmin
 			if (connection == null)
 				throw new ArgumentNullException ("connection");
 			Connection = connection;
-			
+
 			TableMappings = Connection.TableMappings.ToArray ();
-			
+
 			UITable = new UITableView (SQLiteAdmin.GetTableRect(), UITableViewStyle.Plain);
 			DataSource = new Data (this);
 			UITable.DataSource = DataSource;
@@ -83,7 +84,7 @@ namespace SQLite.MonoTouchAdmin
 				NavigationItem.Title = Connection.GetType().Name;
 			}
 		}
-		
+
 		public class Del : UITableViewDelegate
 		{
 			TablesViewController _c;
@@ -131,7 +132,7 @@ namespace SQLite.MonoTouchAdmin
 			}
 		}
 	}
-	
+
 	public class TableViewController : UIViewController
 	{
 		public SQLiteConnection Connection { get; private set; }
@@ -139,7 +140,7 @@ namespace SQLite.MonoTouchAdmin
 		public TableMapping Table { get; private set; }
 		public List<object> Rows { get; private set; }
 		public UITableView UITable { get; private set; }
-		
+
 		int PageSize = 100;
 
 		public TableViewController (TableMapping table, SQLiteConnection connection)
@@ -150,32 +151,32 @@ namespace SQLite.MonoTouchAdmin
 				throw new ArgumentNullException ("connection");
 			Table = table;
 			Connection = connection;
-			
+
 			Rows = new List<object>();
-			
+
 			UITable = new UITableView (SQLiteAdmin.GetTableRect(), UITableViewStyle.Plain);
 			UITable.DataSource = new Data (this);
-			
+
 			GetMoreData();
 			UITable.ReloadData();
 		}
-		
+
 		void GetMoreData() {
 			var pk = Table.PK;
 			if (pk == null) {
-				Rows.AddRange(Connection.Query(Table, 
+				Rows.AddRange(Connection.Query(Table,
 				                               "select * from \"" + Table.TableName + "\""));
 			}
 			else {
 				var lastId = Rows.Count > 0 ? pk.GetValue(Rows[Rows.Count-1]) : 0;
-				Rows.AddRange(Connection.Query(Table, 
+				Rows.AddRange(Connection.Query(Table,
 				                               "select * from \"" + Table.TableName + "\"" +
 				                               " where \"" + pk.Name + "\" > ? " +
 				                               " order by \"" + pk.Name + "\"" +
 				                               " limit " + PageSize, lastId));
 			}
 		}
-		
+
 		public override void ViewDidLoad ()
 		{
 			if (NavigationItem != null) {
@@ -183,7 +184,7 @@ namespace SQLite.MonoTouchAdmin
 			}
 			View.AddSubview(UITable);
 		}
-		
+
 		public class Data : UITableViewDataSource {
 			TableViewController _c;
 			public Data (TableViewController c)
@@ -212,3 +213,4 @@ namespace SQLite.MonoTouchAdmin
 	}
 
 }
+#endif

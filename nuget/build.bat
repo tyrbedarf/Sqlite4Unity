@@ -1,1 +1,0 @@
-nuget pack sqlite-net.nuspec -o .\
