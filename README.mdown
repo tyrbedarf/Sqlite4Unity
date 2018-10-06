@@ -9,7 +9,9 @@ However, since these types are implemented using "blob" as column type, you shou
 
 columns using this type. Keep in mind that all C# types implement getHashCode().
 
-#Install
+![logo](./logo.png)
+
+# Install
 
 In order to use Sqlite4Unity you will have to download the Sqlite3 library and place it in your Asset/Plugins-Folder.
 
@@ -32,7 +34,6 @@ net-sqlite was designed as a quick and convenient database layer. Its design fol
 
 * Not an ADO.NET implementation. This is not a full SQLite driver. If you need that, use [Mono.Data.SQLite](http://www.mono-project.com/SQLite) or [csharp-sqlite](http://code.google.com/p/csharp-sqlite/).
 
-![logo](./logo.png)
 
 ## Meta
 
