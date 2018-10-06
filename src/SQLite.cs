@@ -52,6 +52,26 @@ using Sqlite3Statement = System.IntPtr;
 
 namespace SQLite
 {
+    public static class Log
+    {
+        public static void Write(string arg)
+        {
+#if UNITY_STANDALONE
+            UnityEngine.Debug.Log(arg);
+#else
+            System.Debug.WriteLine(arg);
+#endif
+        }
+
+        public static void WriteError(string arg)
+        {
+#if UNITY_STANDALONE
+            UnityEngine.Debug.LogError(arg);
+#else
+            System.Debug.WriteLine(arg);
+#endif
+        }
+    }
     public class SQLiteException : Exception
     {
         public SQLite3.Result Result { get; private set; }
@@ -178,6 +198,8 @@ namespace SQLite
             StoreDateTimeAsTicks = storeDateTimeAsTicks;
 
             BusyTimeout = TimeSpan.FromSeconds(0.1);
+
+            // Log.Write("Db Path: " + DatabasePath);
         }
 
         static SQLiteConnection()
@@ -639,7 +661,7 @@ namespace SQLite
             {
                 _sw.Stop();
                 _elapsedMilliseconds += _sw.ElapsedMilliseconds;
-                UnityEngine.Debug.Log(string.Format("Finished in {0} ms ({1:0.0} s total)", _sw.ElapsedMilliseconds, _elapsedMilliseconds / 1000.0));
+                Log.Write(string.Format("Finished in {0} ms ({1:0.0} s total)", _sw.ElapsedMilliseconds, _elapsedMilliseconds / 1000.0));
             }
 
             return r;
@@ -1741,13 +1763,13 @@ namespace SQLite
                     var obj = @object.GetType().GetProperty(p.Name).GetValue(@object, null);
                     if(obj == null)
                     {
-                        UnityEngine.Debug.LogError("Value is null " + @object);
+                        Log.WriteError("Value is null " + @object);
                     }
 
                     var range = (IEnumerable) obj;
                     if(range == null)
                     {
-                        UnityEngine.Debug.LogError("Range is null " + @object + " Object " + obj);
+                        Log.WriteError("Range is null " + @object + " Object " + obj);
                     }
 
                     foreach(var o in range)
@@ -2583,41 +2605,15 @@ namespace SQLite
             {
                 return "varchar(36)";
             }
-#if UNITY_STANDALONE
-            else if(clrType == typeof(UnityEngine.Vector3))
-            {
-                return "blob";
-            }
-            else if(clrType == typeof(UnityEngine.Vector2))
-            {
-                return "blob";
-            }
-
-            else if (clrType == typeof(UnityEngine.Color))
-            {
-                return "blob";
-            }
-
-            /*else if(clrType == typeof(Zeta.Vector2i))
-            {
-                return "blob";
-            }
-            else if(clrType == typeof(Zeta.Vector3i))
-            {
-                return "blob";
-            }
-            else if(clrType == typeof(Zeta.Vector3d))
-            {
-                return "blob";
-            }
-            else if(clrType == typeof(Zeta.Vector2d))
-            {
-                return "blob";
-            }*/
-#endif
             else
             {
-                throw new NotSupportedException("Don't know about " + clrType);
+                string r = null;
+                if(!Types.TryGetSql(clrType, p, out r))
+                {
+                    throw new NotSupportedException("Don't know about " + clrType);
+                }
+
+                return r;
             }
         }
 
@@ -2760,7 +2756,7 @@ namespace SQLite
         {
             if(_conn.Trace)
             {
-                UnityEngine.Debug.Log("Executing: " + this);
+                Log.Write("Executing: " + this);
             }
 
             var r = SQLite3.Result.OK;
@@ -2819,7 +2815,7 @@ namespace SQLite
         {
             if(_conn.Trace)
             {
-                UnityEngine.Debug.Log("Executing Query: " + this);
+                Log.Write("Executing Query: " + this);
             }
 
             var stmt = Prepare();
@@ -2865,7 +2861,7 @@ namespace SQLite
         {
             if(_conn.Trace)
             {
-                UnityEngine.Debug.Log("Executing Query: " + this);
+                Log.Write("Executing Query: " + this);
             }
 
             T val = default(T);
@@ -3014,85 +3010,12 @@ namespace SQLite
                 {
                     SQLite3.BindText(stmt, index, ((Guid)value).ToString(), 72, NegativePointer);
                 }
-#if UNITY_STANDALONE
-                else if(value is UnityEngine.Vector2)
-                {
-                    var vec = (UnityEngine.Vector2) value;
-                    var bytes = new byte[sizeof(float) * 2];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(float), sizeof(float));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-
-                else if(value is UnityEngine.Vector3)
-                {
-                    var vec = (UnityEngine.Vector3) value;
-                    var bytes = new byte[sizeof(float) * 3];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(float), sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.z), 0, bytes, sizeof(float) * 2, sizeof(float));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-
-                else if (value is UnityEngine.Color)
-                {
-                    var vec = (UnityEngine.Color)value;
-                    var bytes = new byte[sizeof(float) * 4];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.r), 0, bytes, 0, sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.g), 0, bytes, sizeof(float), sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.b), 0, bytes, sizeof(float) * 2, sizeof(float));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.a), 0, bytes, sizeof(float) * 3, sizeof(float));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-                /*
-                else if(value is Zeta.Vector2i)
-                {
-                    var vec = (Zeta.Vector2i) value;
-                    var bytes = new byte[sizeof(Int32) * 2];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(Int32));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(Int32), sizeof(Int32));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-
-                else if(value is Zeta.Vector3i)
-                {
-                    var vec = (Zeta.Vector3i) value;
-                    var bytes = new byte[sizeof(Int32) * 3];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(Int32));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(Int32), sizeof(Int32));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.z), 0, bytes, sizeof(Int32) * 2, sizeof(Int32));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-
-                else if(value is Zeta.Vector2d)
-                {
-                    var vec = (Zeta.Vector2d) value;
-                    var bytes = new byte[sizeof(double) * 2];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(double));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(double), sizeof(double));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }
-
-                else if(value is Zeta.Vector3d)
-                {
-                    var vec = (Zeta.Vector3d) value;
-                    var bytes = new byte[sizeof(double) * 3];
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.x), 0, bytes, 0, sizeof(double));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.y), 0, bytes, sizeof(double), sizeof(double));
-                    Buffer.BlockCopy(BitConverter.GetBytes(vec.z), 0, bytes, sizeof(double) * 2, sizeof(double));
-
-                    SQLite3.BindBlob(stmt, index, bytes, bytes.Length, NegativePointer);
-                }*/
-#endif
                 else
                 {
-                    throw new NotSupportedException("Cannot store type: " + value.GetType());
+                    if(!Types.TryBind(value.GetType(), stmt, index, value))
+                    {
+                        throw new NotSupportedException("Cannot store type: " + value.GetType());
+                    }
                 }
             }
         }
@@ -3190,41 +3113,16 @@ namespace SQLite
                 {
                     var text = SQLite3.ColumnString(stmt, index);
                     return new Guid(text);
-                }
-#if UNITY_STANDALONE
-                else if(clrType == typeof(UnityEngine.Vector3))
-                {
-                    return SQLite3.ColumnVector3(stmt, index);
-                }
-                else if(clrType == typeof(UnityEngine.Vector2))
-                {
-                    return SQLite3.ColumnVector2(stmt, index);
-                }
-                else if (clrType == typeof(UnityEngine.Color))
-                {
-                    return SQLite3.ColumnColor(stmt, index);
-                }
-                /*
-                else if(clrType == typeof(Zeta.Vector3i))
-                {
-                    return SQLite3.ColumnVector3i(stmt, index);
-                }
-                else if(clrType == typeof(Zeta.Vector2i))
-                {
-                    return SQLite3.ColumnVector2i(stmt, index);
-                }
-                else if(clrType == typeof(Zeta.Vector3d))
-                {
-                    return SQLite3.ColumnVector3d(stmt, index);
-                }
-                else if(clrType == typeof(Zeta.Vector2d))
-                {
-                    return SQLite3.ColumnVector2d(stmt, index);
-                }*/
-#endif
+                }                
                 else
                 {
-                    throw new NotSupportedException("Don't know how to read " + clrType);
+                    object r = null;
+                    if(!Types.TryRead(clrType, stmt, index, out r))
+                    {
+                        throw new NotSupportedException("Don't know how to read " + clrType);
+                    }
+
+                    return r;
                 }
             }
         }
@@ -3253,7 +3151,7 @@ namespace SQLite
         {
             if(Connection.Trace)
             {
-                UnityEngine.Debug.Log("Executing: " + CommandText);
+                Log.Write("Executing: " + CommandText);
             }
 
             var r = SQLite3.Result.OK;
@@ -4245,77 +4143,6 @@ namespace SQLite
                 Marshal.Copy(ColumnBlob(stmt, index), result, 0, length);
             return result;
         }
-
-#if UNITY_STANDALONE
-        public static UnityEngine.Vector3 ColumnVector3(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToSingle(bytes, 0);
-            var y = BitConverter.ToSingle(bytes, sizeof(float));
-            var z = BitConverter.ToSingle(bytes, sizeof(float) * 2);
-
-            return new UnityEngine.Vector3(x, y, z);
-        }
-
-        public static UnityEngine.Vector2 ColumnVector2(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToSingle(bytes, 0);
-            var y = BitConverter.ToSingle(bytes, sizeof(float));
-
-            return new UnityEngine.Vector2(x, y);
-        }
-
-        public static UnityEngine.Color ColumnColor(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var r = BitConverter.ToSingle(bytes, 0);
-            var g = BitConverter.ToSingle(bytes, sizeof(float));
-            var b = BitConverter.ToSingle(bytes, sizeof(float) * 2);
-            var a = BitConverter.ToSingle(bytes, sizeof(float) * 3);
-
-            return new UnityEngine.Color(r, g, b, a);
-        }
-
-        /*
-        public static Zeta.Vector2i ColumnVector2i(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToInt32(bytes, 0);
-            var y = BitConverter.ToInt32(bytes, sizeof(Int32));
-
-            return new Zeta.Vector2i(x, y);
-        }
-
-        public static Zeta.Vector3i ColumnVector3i(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToInt32(bytes, 0);
-            var y = BitConverter.ToInt32(bytes, sizeof(Int32));
-            var z = BitConverter.ToInt32(bytes, sizeof(Int32) * 2);
-
-            return new Zeta.Vector3i(x, y, z);
-        }
-
-        public static Zeta.Vector2d ColumnVector2d(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToDouble(bytes, 0);
-            var y = BitConverter.ToDouble(bytes, sizeof(double));
-
-            return new Zeta.Vector2d(x, y);
-        }
-
-        public static Zeta.Vector3d ColumnVector3d(IntPtr stmt, int index)
-        {
-            var bytes = ColumnByteArray(stmt, index);
-            var x = BitConverter.ToDouble(bytes, 0);
-            var y = BitConverter.ToDouble(bytes, sizeof(double));
-            var z = BitConverter.ToDouble(bytes, sizeof(double) * 2);
-
-            return new Zeta.Vector3d(x, y, z);
-        }*/
-#endif
 #else
         public static Result Open(string filename, out Sqlite3DatabaseHandle db)
         {
