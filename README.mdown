@@ -3,8 +3,7 @@
 
 Sqlite4Unity is a fork of [net-sqlite](https://github.com/daynin/net-sqlite) but modified to work inside Unity3D game engine. Beside that a mechanism to support new datatypes (at least to store data) inside Sqlite has been implemented (see: TypeHandler.cs inside src how to do that).
 
-However, since these types are implemented using "blob" as column type, you should not try to build indices over them or try to retrieve data using columns using this type. Keep in mind that all C# types implement getHashCode().
-
+However, since these types are implemented using "blob" as column type, you should not try to build indices over them or try to retrieve data using these datatypes as parameters in queries. Keep in mind that all C# types implement getHashCode(). Use a second column with index of type integer and fill it using the hashcodes of Vector2, Vector3 etc.
 ![logo](./logo.png)
 
 # Install
